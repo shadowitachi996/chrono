@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   Dimensions,
   ScrollView,
   TouchableOpacity,
+  ViewStyle,
 } from 'react-native';
 
 // --- Configuration & Constants ---
@@ -81,6 +82,18 @@ const StreakMap = () => {
   const totalWidth = colWidth * DAYS_IN_WEEK;
   const totalHeight = rowHeight * WEEKS_IN_YEAR;
 
+  // Memoize cell styles to prevent re-creation on every render
+  const getCellStyle = useCallback((level: StreakLevel): ViewStyle => {
+    let backgroundColor = COLORS.level0;
+    if (level === 1 || level === 2) backgroundColor = COLORS.level2;
+    if (level === 3) backgroundColor = COLORS.level3;
+    if (level === 4) backgroundColor = COLORS.level4;
+    
+    return {
+      backgroundColor,
+    };
+  }, []);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -100,24 +113,20 @@ const StreakMap = () => {
             const row = Math.floor(index / DAYS_IN_WEEK);
             const col = index % DAYS_IN_WEEK;
             
-            // Determine color based on level
-            let backgroundColor = COLORS.level0;
-            if (item.level === 1 || item.level === 2) backgroundColor = COLORS.level2;
-            if (item.level === 3) backgroundColor = COLORS.level3;
-            if (item.level === 4) backgroundColor = COLORS.level4;
-
             return (
               <TouchableOpacity
-                key={index}
+                key={item.date} // Use date as key for stability
                 style={[
                   styles.cell,
+                  getCellStyle(item.level),
                   {
-                    backgroundColor,
                     top: row * rowHeight,
                     left: col * colWidth,
                   },
                 ]}
                 activeOpacity={0.7}
+                // Prevent layout thrashing by not passing dynamic styles to TouchableOpacity if possible,
+                // but here we need the position.
               >
                 {/* Tooltip could go here on press */}
               </TouchableOpacity>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,21 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { NavigationContainer, useNavigation, useRoute } from '@react-navigation/native';
+import { createNativeStackNavigator, NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { usePedometer } from 'expo-sensors';
+
+// Define Root Stack Navigator Types
+type RootStackParamList = {
+  Home: undefined;
+  Search: undefined;
+  Profile: undefined;
+};
+
+type RootStackNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 // Placeholder components for demonstration
 const Header = () => (
@@ -23,7 +34,14 @@ const Header = () => (
   </View>
 );
 
-const StatCard = ({ title, value, icon, color }: any) => (
+interface StatCardProps {
+  title: string;
+  value: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+}
+
+const StatCard = ({ title, value, icon, color }: StatCardProps) => (
   <View style={[styles.card, { backgroundColor: color }]}>
     <View style={styles.cardHeader}>
       <Text style={styles.cardTitle}>{title}</Text>
@@ -59,27 +77,95 @@ const RecentActivity = () => (
   </View>
 );
 
-const BottomNav = ({ navigation }: any) => (
-  <View style={styles.bottomNav}>
-    <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
-      <Ionicons name="home" size={24} color="#2196f3" />
-      <Text style={[styles.navText, { color: '#2196f3' }]}>Home</Text>
-    </TouchableOpacity>
-    <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Search')}>
-      <Ionicons name="search" size={24} color="#9e9e9e" />
-      <Text style={styles.navText}>Search</Text>
-    </TouchableOpacity>
-    <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
-      <Ionicons name="person" size={24} color="#9e9e9e" />
-      <Text style={styles.navText}>Profile</Text>
-    </TouchableOpacity>
-  </View>
-);
+interface BottomNavProps {
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+}
 
-const Stack = createNativeStackNavigator();
+const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
+  const navigation = useNavigation<RootStackNavigationProp>();
+
+  const handlePress = useCallback((screen: keyof RootStackParamList) => {
+    onTabChange(screen);
+    // Logic to navigate using the actual navigation prop
+    if (screen !== activeTab) {
+      navigation.navigate(screen);
+    }
+  }, [activeTab, navigation, onTabChange]);
+
+  return (
+    <View style={styles.bottomNav}>
+      <TouchableOpacity 
+        style={styles.navItem} 
+        onPress={() => handlePress('Home')}
+      >
+        <Ionicons 
+          name="home" 
+          size={24} 
+          color={activeTab === 'Home' ? '#2196f3' : '#9e9e9e'} 
+        />
+        <Text style={[styles.navText, { color: activeTab === 'Home' ? '#2196f3' : '#9e9e9e' }]}>Home</Text>
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={styles.navItem} 
+        onPress={() => handlePress('Search')}
+      >
+        <Ionicons 
+          name="search" 
+          size={24} 
+          color={activeTab === 'Search' ? '#2196f3' : '#9e9e9e'} 
+        />
+        <Text style={[styles.navText, { color: activeTab === 'Search' ? '#2196f3' : '#9e9e9e' }]}>Search</Text>
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={styles.navItem} 
+        onPress={() => handlePress('Profile')}
+      >
+        <Ionicons 
+          name="person" 
+          size={24} 
+          color={activeTab === 'Profile' ? '#2196f3' : '#9e9e9e'} 
+        />
+        <Text style={[styles.navText, { color: activeTab === 'Profile' ? '#2196f3' : '#9e9e9e' }]}>Profile</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function MainScreen() {
   const [activeTab, setActiveTab] = useState('Home');
+  const { steps, isAvailable, startPedometerAsync, stopPedometerAsync } = usePedometer();
+
+  // Initialize Pedometer logic
+  useEffect(() => {
+    const initPedometer = async () => {
+      if (isAvailable) {
+        try {
+          await startPedometerAsync({
+            updateIntervalMs: 1000,
+          });
+        } catch (error) {
+          console.error('Failed to start pedometer:', error);
+        }
+      }
+    };
+
+    initPedometer();
+
+    return () => {
+      stopPedometerAsync();
+    };
+  }, [isAvailable, startPedometerAsync, stopPedometerAsync]);
+
+  // Update active tab based on navigation state
+  const route = useRoute();
+  useEffect(() => {
+    if (route.name) {
+      setActiveTab(route.name as string);
+    }
+  }, [route.name]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -120,9 +206,26 @@ export default function MainScreen() {
             </TouchableOpacity>
           </View>
         </View>
+        
+        {/* Debug View for Pedometer */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Pedometer Status</Text>
+          <View style={styles.activityItem}>
+            <View style={[styles.activityIcon, { backgroundColor: '#e0f7fa' }]}>
+              <Ionicons name="footsteps" size={20} color="#00bcd4" />
+            </View>
+            <View style={styles.activityDetails}>
+              <Text style={styles.activityText}>Steps Count</Text>
+              <Text style={styles.activitySubtext}>
+                {isAvailable ? 'Active' : 'Not Available'}
+              </Text>
+            </View>
+            <Text style={styles.activityAmount}>{steps}</Text>
+          </View>
+        </View>
       </ScrollView>
 
-      <BottomNav navigation={{ navigate: () => {} }} />
+      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
     </SafeAreaView>
   );
 }

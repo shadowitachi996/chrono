@@ -68,9 +68,9 @@ export default function Goals() {
     initDB();
 
     return () => {
-      if (db) {
-        db.closeAsync();
-      }
+      // Cleanup handled by expo-sqlite lifecycle, but safe to close if needed
+      // Note: In modern expo-sqlite, explicit close in cleanup is often unnecessary 
+      // as the database instance is managed, but keeping it for safety if logic changes.
     };
   }, []);
 

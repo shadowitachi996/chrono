@@ -1,4 +1,3 @@
-import * as React from 'react';
 import { Platform } from 'react-native';
 import { Audio } from 'expo-av';
 import { StepCounter } from 'expo-sensors';
@@ -27,7 +26,7 @@ export class AlarmService {
   private mathQuestions: MathQuestion[] = [];
   private currentQuestionIndex = 0;
   private stepsGoal = 20;
-  private stepsCompleted = 0;
+  private initialStepCount = 0;
   private isAlarmActive = false;
 
   private constructor() {}
@@ -44,7 +43,7 @@ export class AlarmService {
   public async initialize(config: AlarmConfig): Promise<void> {
     this.isAlarmActive = true;
     this.stepsGoal = config.pedometerStepsGoal || 20;
-    this.stepsCompleted = 0;
+    this.initialStepCount = 0;
 
     if (config.type === 'math') {
       this.generateMathQuestions(config.mathQuestionsCount || 3);
@@ -52,6 +51,9 @@ export class AlarmService {
 
     if (Platform.OS !== 'web') {
       await StepCounter.requestPermissionsAsync();
+      // Get initial step count to calculate delta
+      const initialSteps = await StepCounter.getStepCountAsync();
+      this.initialStepCount = initialSteps;
     }
   }
 
@@ -105,18 +107,11 @@ export class AlarmService {
     this.stepSubscription = StepCounter.watchStepCount(
       (event) => {
         const totalSteps = event.steps;
-        // Calculate steps taken since alarm started
-        // Note: In a real app, you might need to store the initial step count
-        // to calculate delta. Here we assume a simplified logic or reset.
-        // For this requirement, we track progress towards the goal.
+        const stepsTaken = totalSteps - this.initialStepCount;
         
-        // Simple logic: If total steps > goal, trigger.
-        // Better logic: Store initial steps in initialize().
-        // Assuming initialize() resets context or we track delta.
+        onStepUpdate(stepsTaken);
         
-        onStepUpdate(totalSteps);
-        
-        if (totalSteps >= this.stepsGoal) {
+        if (stepsTaken >= this.stepsGoal) {
           this.completeAlarm('pedometer');
         }
       },
@@ -167,7 +162,7 @@ export class AlarmService {
     this.isAlarmActive = false;
     this.mathQuestions = [];
     this.currentQuestionIndex = 0;
-    this.stepsCompleted = 0;
+    this.initialStepCount = 0;
     this.stopPedometerListener();
     this.stopAlarmSound();
   }
