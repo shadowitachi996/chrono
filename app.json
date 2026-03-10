@@ -2,6 +2,12 @@
   "expo": {
     "name": "chrono",
     "slug": "chrono",
+    "owner": "riston",
+    "extra": {
+      "eas": {
+        "projectId": "f650536c-a3ff-4fba-bc46-a4f07e9e3d01"
+      }
+    },
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -21,7 +27,8 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.riston.chrono"
     },
     "web": {
       "favicon": "./assets/favicon.png"
