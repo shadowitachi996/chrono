@@ -13,7 +13,7 @@ import {
 import { NavigationContainer, useNavigation, useRoute } from '@react-navigation/native';
 import { createNativeStackNavigator, NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { usePedometer } from 'expo-sensors';
+import { Pedometer } from 'expo-sensors';
 
 // Define Root Stack Navigator Types
 type RootStackParamList = {
@@ -134,38 +134,45 @@ const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-export default function MainScreen() {
-  const [activeTab, setActiveTab] = useState('Home');
-  const { steps, isAvailable, startPedometerAsync, stopPedometerAsync } = usePedometer();
+export function usePedometer() {
+  const [steps, setSteps] = useState(0);
+  const [isAvailable, setIsAvailable] = useState(false);
 
-  // Initialize Pedometer logic
   useEffect(() => {
-    const initPedometer = async () => {
-      if (isAvailable) {
-        try {
-          await startPedometerAsync({
-            updateIntervalMs: 1000,
-          });
-        } catch (error) {
-          console.error('Failed to start pedometer:', error);
-        }
-      }
-    };
+    // 1. Change the type to 'any' or use the generic Subscription type
+    let subscription: { remove: () => void } | null = null;
 
-    initPedometer();
+    async function checkAvailability() {
+      try {
+        const result = await Pedometer.isAvailableAsync();
+        setIsAvailable(result);
+      } catch (e) {
+        setIsAvailable(false);
+      }
+    }
+
+    checkAvailability();
+
+    // 2. Assign the watcher
+    subscription = Pedometer.watchStepCount(result => {
+      setSteps(result.steps);
+    });
 
     return () => {
-      stopPedometerAsync();
+      // 3. Clean up safely
+      subscription?.remove();
     };
-  }, [isAvailable, startPedometerAsync, stopPedometerAsync]);
+  }, []);
 
-  // Update active tab based on navigation state
-  const route = useRoute();
-  useEffect(() => {
-    if (route.name) {
-      setActiveTab(route.name as string);
-    }
-  }, [route.name]);
+  return { steps, isAvailable };
+}
+
+export default function MainScreen({ route, navigation }: any) {
+  const [activeTab, setActiveTab] = useState('Home');
+
+  const { steps, isAvailable } = usePedometer();
+
+ 
 
   return (
     <SafeAreaView style={styles.container}>
