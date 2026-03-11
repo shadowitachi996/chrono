@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { initializeService } from './services/AlarmService';
 
 // Assuming your screens are in these paths
 import MainScreen from './screens/MainScreen'; 
@@ -12,6 +13,21 @@ import ProfileScreen from './screens/ProfileScreen'; // Placeholder or actual pr
 const Tab = createBottomTabNavigator();
 
 export default function App() {
+
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    async function setup() {
+      try {
+        await initializeService();
+        setIsReady(true);
+      } catch (e) {
+        console.error("DB Boot Error:", e);
+      }
+    }
+    setup();
+  }, []);
+
   return (
     <NavigationContainer>
       <Tab.Navigator

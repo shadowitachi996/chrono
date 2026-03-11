@@ -54,11 +54,13 @@ export const initDB = async (): Promise<void> => {
     const count: any = await db.getFirstAsync('SELECT COUNT(*) as count FROM protocols');
     if (count.count === 0) {
       await db.runAsync(
-        'INSERT INTO protocols (title, time, icon, enabled) VALUES (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?)',
-        ['Brain Check (Cognitive)', '3:00 AM', 'calculator-outline', 1],
-        ['Body Check (Physical)', '3:10 AM', 'fitness-outline', 1],
-        ['Time to Sleep', '9:00 PM', 'moon-outline', 1]
-      );
+      'INSERT INTO protocols (title, time, icon, enabled) VALUES (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?)',
+      [
+        'Brain Check (Cognitive)', '3:00 AM', 'calculator-outline', 1,
+        'Body Check (Physical)', '3:10 AM', 'fitness-outline', 1,
+        'Time to Sleep', '9:00 PM', 'moon-outline', 1
+      ]
+    );
     }
   } catch (error) {
     console.error('Failed to initialize AlarmService Database:', error);
@@ -137,7 +139,9 @@ export const startBodyCheckMonitoring = (onThresholdMet: () => void) => {
 };
 
 // Initialize on service load
-initDB();
+export const initializeService = async () => {
+  await initDB();
+};
 
 export default {
   playAlarmSound,
